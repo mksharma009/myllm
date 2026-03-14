@@ -16,7 +16,7 @@ def create_app() -> Flask:
     def index_page():
         """Render the HTML form used to send requests to the Gemini backend."""
 
-        return render_template("index.html")
+        return render_template("index.html", title="Gemini API Query Interface")
 
     @app.route("/gemini")
     def fetch_gemini_response():
