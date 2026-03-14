@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gemini API Query</title>
+  </head>
+  <body>
+    <h1>Gemini API Query</h1>
+    <form id="geminiForm">
+      <label for="query">Enter your query for Gemini:</label><br><br>
+      <input type="text" id="query" name="query" size="50"><br><br>
+      <input type="submit" value="Submit">
+    </form>
+
+    <div id="result" style="margin-top: 1rem;"></div>
+
+    <script>
+      const form = document.getElementById('geminiForm');
+      const resultDiv = document.getElementById('result');
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const query = document.getElementById('query').value;
+        if (!query) {
+          resultDiv.textContent = 'Please enter a query.';
+          return;
+        }
+
+        resultDiv.textContent = 'Loading...';
+
+        try {
+          const resp = await fetch(`/gemini?query=${encodeURIComponent(query)}`);
+          if (!resp.ok) {
+            resultDiv.textContent = `Error: ${resp.status} ${resp.statusText}`;
+            return;
+          }
+
+          const data = await resp.json();
+          resultDiv.innerHTML = `<h2>Response</h2><pre>${data.result}</pre>`;
+        } catch (err) {
+          resultDiv.textContent = `Fetch failed: ${err}`;
+        }
+      });
+    </script>
+  </body>
+</html>
