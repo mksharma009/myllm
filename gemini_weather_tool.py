@@ -132,7 +132,7 @@ def create_app() -> Flask:
             return jsonify({"error": "Missing query"}), 400
 
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-2.5-flash", tools=[weather_tool])
+        model = genai.GenerativeModel(model_name=os.getenv("MODEL_NAME"), tools=[weather_tool])
 
         # Start conversation with the user's query
         chat = model.start_chat()

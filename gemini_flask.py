@@ -27,7 +27,7 @@ def create_app() -> Flask:
             return jsonify({"error": "Missing query"}), 400
 
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel(model_name=os.getenv("MODEL_NAME"))
         response = model.generate_content(query)
         return jsonify({"result": response.text})
 
