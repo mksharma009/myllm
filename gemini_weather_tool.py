@@ -1,79 +1,18 @@
-import logging
 import os
-from typing import Tuple, Optional
-
+import logging
 import google.generativeai as genai
-import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
-from geopy.geocoders import Nominatim
 from google.generativeai import types
+from logging_config import setup_logging
+from weather_func import get_weather
 
-logging.basicConfig(level=logging.INFO)
-
+setup_logging()
 load_dotenv()
 
 # Constants
 MAX_ITERATIONS = 5
-GEOLOCATOR_USER_AGENT = "gemini_weather_app"
 WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
-
-
-def get_lat_long(location: str) -> Tuple[Optional[float], Optional[float]]:
-    """Get latitude and longitude for a given location using OpenStreetMap Nominatim API.
-
-    Args:
-        location: The location name to geocode.
-
-    Returns:
-        A tuple of (latitude, longitude) or (None, None) if not found.
-    """
-    geolocator = Nominatim(user_agent=GEOLOCATOR_USER_AGENT)
-    try:
-        loc = geolocator.geocode(location)
-        if loc:
-            return loc.latitude, loc.longitude
-    except Exception as e:
-        logging.error(f"Error geocoding location '{location}': {e}")
-    return None, None
-
-
-def get_weather(location: str) -> str:
-    """Get weather information for a given location.
-
-    Args:
-        location: The location name to get weather for.
-
-    Returns:
-        A string with weather information or an error message.
-    """
-    lat, lon = get_lat_long(location)
-    if lat is None or lon is None:
-        return f"Sorry, I couldn't find the location: {location}."
-
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current_weather": True,
-    }
-
-    try:
-        response = requests.get(WEATHER_API_URL, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
-        current_weather = data.get("current_weather", {})
-        temperature = current_weather.get("temperature")
-        weather_code = current_weather.get("weathercode")
-
-        if temperature is not None:
-            return f"The current temperature in {location} is {temperature}°C with weather code {weather_code}."
-        else:
-            return f"Sorry, I couldn't retrieve weather data for {location}."
-
-    except requests.RequestException as e:
-        logging.error(f"Error fetching weather data for '{location}': {e}")
-        return f"Sorry, I couldn't fetch the weather information for {location} at this time."
 
 
 # Define the weather tool
@@ -132,7 +71,9 @@ def create_app() -> Flask:
             return jsonify({"error": "Missing query"}), 400
 
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel(model_name=os.getenv("MODEL_NAME"), tools=[weather_tool])
+        model = genai.GenerativeModel(
+            model_name=os.getenv("MODEL_NAME"), tools=[weather_tool]
+        )
 
         # Start conversation with the user's query
         chat = model.start_chat()
@@ -155,13 +96,19 @@ def create_app() -> Flask:
                             func_args = function_call.args
 
                             if func_name in tool_registry["weather"]["implementation"]:
-                                func = tool_registry["weather"]["implementation"][func_name]
+                                func = tool_registry["weather"]["implementation"][
+                                    func_name
+                                ]
                                 try:
                                     result = func(**func_args)
-                                    function_result = f"{func_name}({func_args}) = {result}"
+                                    function_result = (
+                                        f"{func_name}({func_args}) = {result}"
+                                    )
                                     logging.info(f"Executed {func_name} successfully")
                                 except Exception as e:
-                                    error_msg = f"Error in {func_name}({func_args}): {str(e)}"
+                                    error_msg = (
+                                        f"Error in {func_name}({func_args}): {str(e)}"
+                                    )
                                     function_result = error_msg
                                     logging.error(error_msg)
                             else:
